@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  DOCTOR
+  ADMIN
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+model User {
+  id           String         @id @default(cuid())
+  email        String         @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  doctor       DoctorProfile?
+  createdAt    DateTime       @default(now())
+}
+
+model DoctorProfile {
+  id                 String         @id @default(cuid())
+  userId             String         @unique
+  user               User           @relation(fields: [userId], references: [id])
+  specialty          String
+  bio                String?
+  photoUrl           String?
+  defaultSlotMinutes Int            @default(30)
+  active             Boolean        @default(true)
+  workingHours       WorkingHours[]
+  timeOff            TimeOff[]
+  appointments       Appointment[]
+}
+
+model Service {
+  id              String        @id @default(cuid())
+  name            String
+  durationMinutes Int
+  price           Int?
+  active          Boolean       @default(true)
+  appointments    Appointment[]
+}
+
+model WorkingHours {
+  id        String        @id @default(cuid())
+  doctorId  String
+  doctor    DoctorProfile @relation(fields: [doctorId], references: [id])
+  weekday   Int // 0=Duminică ... 6=Sâmbătă
+  startTime String // "HH:mm" 24h
+  endTime   String // "HH:mm"
+}
+
+model TimeOff {
+  id        String        @id @default(cuid())
+  doctorId  String
+  doctor    DoctorProfile @relation(fields: [doctorId], references: [id])
+  date      DateTime // ziua blocată
+  startTime String? // dacă null => toată ziua
+  endTime   String?
+  reason    String?
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  doctorId     String
+  doctor       DoctorProfile     @relation(fields: [doctorId], references: [id])
+  serviceId    String
+  service      Service           @relation(fields: [serviceId], references: [id])
+  patientName  String
+  patientPhone String
+  patientEmail String?
+  date         DateTime // ziua programării (00:00)
+  startTime    String // "HH:mm"
+  endTime      String // "HH:mm"
+  status       AppointmentStatus @default(CONFIRMED)
+  notes        String?
+  createdAt    DateTime          @default(now())
+
+  @@unique([doctorId, date, startTime]) // împiedică dublarea slotului
+}

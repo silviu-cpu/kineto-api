@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: kineto-postgres
+    restart: unless-stopped
+    ports:
+      - '5434:5432'
+    environment:
+      POSTGRES_USER: kineto
+      POSTGRES_PASSWORD: kineto
+      POSTGRES_DB: kineto
+    volumes:
+      - kineto_pgdata:/var/lib/postgresql/data
+
+volumes:
+  kineto_pgdata:
