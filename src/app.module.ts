@@ -10,6 +10,7 @@ import { WorkingHoursModule } from './working-hours/working-hours.module';
 import { AvailabilityModule } from './availability/availability.module';
 import { AppointmentsModule } from './appointments/appointments.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { HealthController } from './health/health.controller';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { NotificationsModule } from './notifications/notifications.module';
     AvailabilityModule,
     AppointmentsModule,
   ],
+  controllers: [HealthController],
   providers: [
     {
       provide: APP_GUARD,

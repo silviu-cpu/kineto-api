@@ -1,0 +1,76 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Necesare pentru autentificare OIDC către AWS (fără chei statice)
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+  EB_APPLICATION_NAME: ${{ vars.EB_APPLICATION_NAME }}
+  EB_ENVIRONMENT_NAME: ${{ vars.EB_ENVIRONMENT_NAME }}
+  EB_S3_BUCKET: ${{ vars.EB_S3_BUCKET }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, tag, and push image to ECR
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+        run: |
+          IMAGE_URI="$REGISTRY/$ECR_REPOSITORY:${{ github.sha }}"
+          docker build -t "$IMAGE_URI" -t "$REGISTRY/$ECR_REPOSITORY:latest" .
+          docker push "$IMAGE_URI"
+          docker push "$REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image_uri=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare Elastic Beanstalk source bundle
+        run: |
+          sed -i "s|__IMAGE_URI__|${{ steps.build.outputs.image_uri }}|g" Dockerrun.aws.json
+          zip -r deploy-bundle.zip Dockerrun.aws.json .ebextensions
+
+      - name: Upload bundle to S3
+        run: |
+          aws s3 cp deploy-bundle.zip "s3://$EB_S3_BUCKET/kineto-api/${{ github.sha }}.zip"
+
+      - name: Create Elastic Beanstalk application version
+        run: |
+          aws elasticbeanstalk create-application-version \
+            --application-name "$EB_APPLICATION_NAME" \
+            --version-label "${{ github.sha }}" \
+            --source-bundle S3Bucket="$EB_S3_BUCKET",S3Key="kineto-api/${{ github.sha }}.zip" \
+            --auto-create-application
+
+      - name: Deploy version to environment
+        run: |
+          aws elasticbeanstalk update-environment \
+            --application-name "$EB_APPLICATION_NAME" \
+            --environment-name "$EB_ENVIRONMENT_NAME" \
+            --version-label "${{ github.sha }}"
+
+      - name: Wait for environment to be ready
+        run: |
+          aws elasticbeanstalk wait environment-updated \
+            --application-name "$EB_APPLICATION_NAME" \
+            --environment-name "$EB_ENVIRONMENT_NAME"
