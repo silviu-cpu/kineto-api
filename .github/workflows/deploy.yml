@@ -5,7 +5,6 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Necesare pentru autentificare OIDC către AWS (fără chei statice)
 permissions:
   id-token: write
   contents: read
@@ -16,7 +15,6 @@ env:
   EB_APPLICATION_NAME: ${{ vars.EB_APPLICATION_NAME }}
   EB_ENVIRONMENT_NAME: ${{ vars.EB_ENVIRONMENT_NAME }}
   EB_S3_BUCKET: ${{ vars.EB_S3_BUCKET }}
-  # Etichetă unică per rulare (commit + numărul rulării) ca re-run-urile să nu se ciocnească
   VERSION_LABEL: ${{ github.sha }}-${{ github.run_number }}
 
 jobs:
