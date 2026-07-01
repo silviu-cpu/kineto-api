@@ -68,9 +68,4 @@ jobs:
             --application-name "$EB_APPLICATION_NAME" \
             --environment-name "$EB_ENVIRONMENT_NAME" \
             --version-label "${{ github.sha }}"
-
-      - name: Wait for environment to be ready
-        run: |
-          aws elasticbeanstalk wait environment-updated \
-            --application-name "$EB_APPLICATION_NAME" \
-            --environment-name "$EB_ENVIRONMENT_NAME"
+          echo "Deploy declanșat. Verifică statusul în consola Elastic Beanstalk."
