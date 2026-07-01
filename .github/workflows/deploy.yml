@@ -16,6 +16,8 @@ env:
   EB_APPLICATION_NAME: ${{ vars.EB_APPLICATION_NAME }}
   EB_ENVIRONMENT_NAME: ${{ vars.EB_ENVIRONMENT_NAME }}
   EB_S3_BUCKET: ${{ vars.EB_S3_BUCKET }}
+  # Etichetă unică per rulare (commit + numărul rulării) ca re-run-urile să nu se ciocnească
+  VERSION_LABEL: ${{ github.sha }}-${{ github.run_number }}
 
 jobs:
   deploy:
@@ -52,14 +54,14 @@ jobs:
 
       - name: Upload bundle to S3
         run: |
-          aws s3 cp deploy-bundle.zip "s3://$EB_S3_BUCKET/kineto-api/${{ github.sha }}.zip"
+          aws s3 cp deploy-bundle.zip "s3://$EB_S3_BUCKET/kineto-api/${VERSION_LABEL}.zip"
 
       - name: Create Elastic Beanstalk application version
         run: |
           aws elasticbeanstalk create-application-version \
             --application-name "$EB_APPLICATION_NAME" \
-            --version-label "${{ github.sha }}" \
-            --source-bundle S3Bucket="$EB_S3_BUCKET",S3Key="kineto-api/${{ github.sha }}.zip" \
+            --version-label "$VERSION_LABEL" \
+            --source-bundle S3Bucket="$EB_S3_BUCKET",S3Key="kineto-api/${VERSION_LABEL}.zip" \
             --auto-create-application
 
       - name: Deploy version to environment
@@ -67,5 +69,5 @@ jobs:
           aws elasticbeanstalk update-environment \
             --application-name "$EB_APPLICATION_NAME" \
             --environment-name "$EB_ENVIRONMENT_NAME" \
-            --version-label "${{ github.sha }}"
+            --version-label "$VERSION_LABEL"
           echo "Deploy declanșat. Verifică statusul în consola Elastic Beanstalk."
