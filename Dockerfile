@@ -1,3 +1,4 @@
+# kineto-api production image
 # ---------- Builder ----------
 FROM node:22-slim AS builder
 
